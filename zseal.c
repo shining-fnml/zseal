@@ -44,6 +44,7 @@
 #include <netdb.h>
 
 #include <sys/select.h>
+#include <signal.h>
 
 static int  zconnect(const char *hostname,int port);
 static int  zstamp(char *s,int l);
@@ -66,6 +67,7 @@ int main(int argc, char **argv) {
   fd_set fds;
   char  *buffer1=NULL, *buffer2 = NULL;
   int    bpos1=0, bpos2=0;
+  pid_t ppid = getppid();
 
   if (argc>=2) {
     if (strcmp(argv[1],"-v")==0 || strcmp(argv[1],"--version")==0) {
@@ -121,7 +123,12 @@ int main(int argc, char **argv) {
     if(FD_ISSET(fd,&fds)) {
       bpos2 += n = read(fd,buffer2,BSZ-bpos2);
       if (!n) {
-        fprintf(stderr,"Connection closed by ICS\n");
+        if (fork())
+          fprintf(stderr,"Connection closed by ICS\n");
+        else {
+          sleep (1);
+          kill (ppid, SIGTERM);
+        }
         exit(0);
       }
       if(n==-1) zdie(1);
